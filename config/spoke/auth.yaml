@@ -1,0 +1,26 @@
+apiVersion: config.openshift.io/v1
+kind: OAuth
+metadata:
+  name: cluster
+spec:
+  identityProviders:
+  - name: keycloak
+    mappingMethod: claim
+    type: OpenID
+    openID:
+      clientID: spoke-cluster
+      clientSecret:
+        name: keycloak-idp-secret
+      ca: 
+        name: keycloak-ca
+      claims:
+        preferredUsername: 
+        - preferred_username
+        name: 
+        - given_name
+        - name
+        email: 
+        - email
+        groups: 
+        - ocp-groups
+      issuer: https://keycloak.apps.cluster0.aws.ocp.team/auth/realms/acm # needs to match current KC address
