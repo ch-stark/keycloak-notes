@@ -1,0 +1,17 @@
+apiVersion: keycloak.org/v1alpha1
+kind: Keycloak
+metadata:
+  labels:
+    app: sso
+  name: example-keycloak
+  namespace: keycloak
+ spec:
+  externalAccess:
+    enabled: true
+  instances: 1
+  keycloakDeploymentSpec:
+    experimental:
+      env:
+        - name: JAVA_TOOL_OPTIONS
+          value: '-Dcom.redhat.fips=false'
+    imagePullPolicy: Always
