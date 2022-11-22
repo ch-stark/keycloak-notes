@@ -31,7 +31,9 @@ Procedure:
 - Sign into Keycloak with admin credentials 
 - Setup Realm for ACM under which all the configurations for the fleet of clusters will reside. Typically each realm is for an isolated set of Users, groups, Clients and IDP associated with them. 
 - Configure Identity Provider in Keycloak. Keycloak will redirect users immediately to auth.redhat.com which acts as the Authorization OIDC server. 
+
 - Authentication Flow configured is Basic browser based flow with redirect to the configured IDP to authenticate incase cookies are deleted or time out
+
 - Clients: Client config is probably the most important aspect of this workflow. There is a client created for each Spoke/Managed cluster and one associated with each Service such as ACS 
   spoke/managed clusters 
 - Spoke/Managed clusters have OAuth servers configured to use OIDC with Issuer url pointing to the Keycloak instance on the Hub cluster
