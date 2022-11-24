@@ -1,6 +1,6 @@
 ## ACM/ACS SSO Integration
 
-Authors: and Christian Stark
+Authors: Anjali Telang and Christian Stark
 
 ## Goal of this blog:
 
@@ -10,12 +10,15 @@ We would like to demonstrate how to deploy Keycloak and configure it to manage a
 
 ## Architecture
 
-We have one Hub-Cluster. On this Cluster Keycloak will be setup and also ACS central has been installed. There is another ManagedCluster
+We have one Hub-Cluster. On this Cluster Keycloak will be setup and also ACS central has been installed. There is another ManagedCluster from there you can
+use SSO using the setup on the Hub.
 
 High level Requirements:
 
 User should be able to login to the OpenShift console, and to ACM console as well as ACS console with the same identity. 
+
 Federate to external/Enterprise IDPs using Keycloak  
+
 Group information from IDP should be synchronized with the cluster. Keycloak which pulls in group information in the token should be able to apply this across clusters similar to how ldap group sync applies to a single cluster.  
 
 
@@ -51,6 +54,17 @@ Hub cluster
 
 ![Authentication Flow](images/05_authenticationflow.png)
   
+
+### Configure SSO for ACS 
+
+
+with RHACS you can have multiple auth providers.. including OpenShift
+you can consume the OCP one and use what you already have.. or use another openid as you like
+for example  
+you can configure OCP to use keycloak and configure ACS to use OCP oauth! fine.!!
+another option is to configure ACS to consume keycloak as auth provider, you will get the same result!
+
+
   6. Clients: Client config is probably the most important aspect of this workflow. There is a client created for each Spoke/Managed cluster and one associated with each Service such as ACS 
 
   ![Clients](images/06_clientskeycloak.png)  
@@ -136,7 +150,7 @@ Goto the Keycloak Instance and follow these Steps:
 8.4 Using Client Scopes: This is an important option. We can either add mappers and scopes under individual clients or use this approach which is to create a separate scope that can be applied to multiple clients that want to use the same scope. Here’s how to do it. 
 In the Keycloak Instance, goto Client Scopes -> New client scope. Add a name, in our case we added “acs” to match the scope to any acs clients.
 
-![ACS Client](images/08_41_client_scrops.png)
+![ACS Client](images/08_41_client_scopes.png)
 
 
 Next, we add mapper to it, by going to Client Scope -> Mapper tab and select Create new with  Protocol Mapper type as “User Realm Role” and Token Claim Name as “groups” and make sure to have Include in ID Token as ON. 
@@ -149,7 +163,7 @@ Next we want to include the scope to only have the Realm role acs_admin which we
 
 8.5 Now that we have this scope, we want to make sure that it is applied client. So goto the Keycloak console -> Clients -> select the ACS client you created -> Client Scopes and select the client scope you created in Step 8.6 from the Available Client Scopes and add it to Assigned Default Client scopes. 
 
-![ACS Client](images/08_5_acsclientscopes.png)
+![ACS Available Clientscopes](images/08_5_acsclientscopes.png)
 
 
 8.6 Check your Identity Provider settings in the Keycloak console and make sure “Sync Mode” is set to “Force” so that any changes in the IDP are reflected in the User’s login. This is important from a compliance standpoint because if any employee quits, they don't get access as the user’s info is updated immediately. 
@@ -157,7 +171,7 @@ Next we want to include the scope to only have the Realm role acs_admin which we
 That’s it. Test by logging into your ACS Console and making sure you can see you are logged in with SSO and have the necessary Role reflected there. 
 
 
-![ACS Client](images/0861.png)
+![User details](images/0861.png)
 
 
 
@@ -166,7 +180,7 @@ Go, back to the KeyCloak console and check again for the User menu -> Find the U
 Also goto Clients -> “acs” client which we created earlier -> Client Scopes -> Evaluate to see the ID Token information. ID token should show you the claim for groups with role “acs_admin” 
 
 
-![ACS Client](images/0862_token.png)
+![Check Token](images/0862_token.png)
 
 
 
@@ -180,6 +194,7 @@ Spoke/Managed clusters have OAuth servers configured to use OIDC with Issuer url
 Role Bindings need to be created to map the groups to cluster roles.  
 
 
+Helper Commands
 
 ```
 # get spoke cluster's redirect url
@@ -254,14 +269,6 @@ spec:
       issuer: https://keycloak.apps.cluster0.aws.ocp.team/auth/realms/acm # needs to match current KC address
 ```
 
-### Configure SSO for ACS 
-
-
-with RHACS you can have multiple auth providers.. including OpenShift
-you can consume the OCP one and use what you already have.. or use another openid as you like
-for example  
-you can configure OCP to use keycloak and configure ACS to use OCP oauth! fine.!!
-another option is to configure ACS to consume keycloak as auth provider, you will get the same result!
 
 
 ### Possible Extension of the solution
