@@ -1,20 +1,20 @@
 ## ACM/ACS SSO Integration
 
-Authors:
+Authors: and Christian Stark
 
-Goal of this blog:
+## Goal of this blog:
 
 Customers should have a seamless login experience for a user that has OpenShift Platform Plus (OPP) to authenticate to OpenShift and services such as RHACS and RHACM that come along with it. 
 The main motivation for  comes from the actual pain of configuring SSO for a fleet of clusters managed by RCACM. 
 We would like to demonstrate how to deploy Keycloak and configure it to manage a fleet of clusters and OPP Services such as ACS.
 
-# Architecture
+## Architecture
 
 We have one Hub-Cluster. On this Cluster Keycloak will be setup and also ACS central has been installed. There is another ManagedCluster
 
-High level Requirements
+High level Requirements:
 
-User should be able to login to the OpenShift console, and to ACM console as well as ACS console with the same identity 
+User should be able to login to the OpenShift console, and to ACM console as well as ACS console with the same identity. 
 Federate to external/Enterprise IDPs using Keycloak  
 Group information from IDP should be synchronized with the cluster. Keycloak which pulls in group information in the token should be able to apply this across clusters similar to how ldap group sync applies to a single cluster.  
 
@@ -28,14 +28,157 @@ One of the most common concerns around the new Operator is the current lack of t
 
 Procedure:
 
-- Sign into Keycloak with admin credentials 
-- Setup Realm for ACM under which all the configurations for the fleet of clusters will reside. Typically each realm is for an isolated set of Users, groups, Clients and IDP associated with them. 
-- Configure Identity Provider in Keycloak. Keycloak will redirect users immediately to auth.redhat.com which acts as the Authorization OIDC server. 
-- Authentication Flow configured is Basic browser based flow with redirect to the configured IDP to authenticate incase cookies are deleted or time out
-- Clients: Client config is probably the most important aspect of this workflow. There is a client created for each Spoke/Managed cluster and one associated with each Service such as ACS 
-  spoke/managed clusters 
-- Spoke/Managed clusters have OAuth servers configured to use OIDC with Issuer url pointing to the Keycloak instance on the Hub cluster
-- Role Bindings need to be created to map the groups to cluster roles.  
+Hub cluster
+
+- 1. Configure and Install Keycloak operator on the hub cluster
+
+ ![REALM](images/00_rhsoo.png)
+
+
+  2. Sign into Keycloak with admin credentials
+
+  3. Setup Realm for ACM under which all the configurations for the fleet of clusters will reside. Typically each realm is for an isolated set of Users, groups, Clients and IDP associated with them. 
+  Screen
+
+ ![REALM](images/01_acmrealm.png)
+
+  4. Configure Identity Provider in Keycloak. Keycloak will redirect users immediately to auth.redhat.com which acts as the Authorization OIDC server. 
+
+![IdentityProvider](images/04_openidconnectconfig.png)
+
+
+  5. Authentication Flow configured is Basic browser based flow with redirect to the configured IDP to authenticate incase cookies are deleted or timeout happened
+
+![Authentication Flow](images/05_authenticationflow.png)
+  
+  6. Clients: Client config is probably the most important aspect of this workflow. There is a client created for each Spoke/Managed cluster and one associated with each Service such as ACS 
+
+  ![Clients](images/06_clientskeycloak.png)  
+
+Example ACS Client
+
+  ![ACS Client](images/06_acsclient.png) 
+
+Some important settings are as follows:
+a: Redirect URL after user successfully logs in with the Authorization server in previous step 
+For OpenShift: https://oauth-openshift.apps.cluster-live.aws.ocp.team/oauth2callback/keycloak
+For ACS clients there are 2 redirect urls:
+https://central-stackrox-central.apps.cluster0.aws.ocp.team/auth/response/oidc
+https://central-stackrox-central.apps.cluster0.aws.ocp.team/sso/providers/oidc/callback
+
+Note: In the ACS Console you will need to add Keycloak as the IDP
+
+Pre-req: ACS Central is installed on the Hub cluster and Admin has link to the console with credentials. 
+Goto the ACS Console -> Platform Configuration -> Access Control -> Create Auth Provider -> Select OIDC in the drop down
+Copy the Callback URLs from this menu and add them to the Keycloak console while Creating the ACS Client. Once the ACS Client is created in Keycloak you will need to add Client id and client secret in ACS Console. 
+
+
+ 
+![Access Control](images/06bacs1.png) 
+
+
+ClientID and Secret
+
+![ACS ClientID-Secret](images/06cclientid-secret.png) 
+
+
+Client scopes  OpenShift client
+
+
+![Client Scopes OpenShift-Client](images/06_clientscopesopenshiftclient.png)   
+ 
+
+Client scopes  ACS client
+
+
+![Client Scopes ACS-Client](images/06_acsclientscopes.png)
+
+
+
+7: Client Roles and Mappers OCP
+Keycloak gives the option to define Roles that can be applied to users. 
+
+
+Mapping IDP group into ACS role
+            We wanted to map the same group (in our case openshift-pm) coming from RHSSO into 
+
+![Client ACS](images/07_clientrolesandmappers.png)
+
+These roles can then be synced to Groups on the OpenShift clusters and admin can then create role binding to map the group to roles inside the openshift cluster, in this case cluster admin roles for the group of users above. 
+
+
+
+![Client ACS](images/07_ocpgroups.png)
+
+8: Mapping IDP group into ACS role
+            We wanted to map the same group (in our case openshift-pm) coming from RHSSO into ACS. 
+Prerequisite from ACS: To map IDP groups into ACS groups and roles we need ACS needs ‘groups’ claim in the ID token it receives from Keycloak. 
+Goto the Keycloak Instance and follow these Steps:
+
+8.1 Under the acs client you have created in Step 6, Goto Mappers and create a mapper. Make sure to add Token Claim Name as ‘groups’
+
+
+![ACS Client](images/08_1_mapper.png)
+
+
+8.2 Create a new Realm role. In our case we will name it acs_admin. We want to map the groups coming in from the Keycloak IDP to this role that will be reflected in the ID token. 
+
+![ACS Client](images/08_2roles_acmadmin.png)  
+
+8.3 Now the actual mapper step. Let’s create a mapper in the Keycloak UI under
+     Identity provider -> mappers  and map the roles coming in from IDP to acs_admin
+
+
+![ACS Client](images/08_3_mapper.png)
+
+
+
+8.4 Using Client Scopes: This is an important option. We can either add mappers and scopes under individual clients or use this approach which is to create a separate scope that can be applied to multiple clients that want to use the same scope. Here’s how to do it. 
+In the Keycloak Instance, goto Client Scopes -> New client scope. Add a name, in our case we added “acs” to match the scope to any acs clients.
+
+![ACS Client](images/08_41_client_scrops.png)
+
+
+Next, we add mapper to it, by going to Client Scope -> Mapper tab and select Create new with  Protocol Mapper type as “User Realm Role” and Token Claim Name as “groups” and make sure to have Include in ID Token as ON. 
+
+
+Next we want to include the scope to only have the Realm role acs_admin which we created in 8.3 above
+ 
+![ACS ScopeMapping](images/08_04_scopemapping.png)
+
+
+8.5 Now that we have this scope, we want to make sure that it is applied client. So goto the Keycloak console -> Clients -> select the ACS client you created -> Client Scopes and select the client scope you created in Step 8.6 from the Available Client Scopes and add it to Assigned Default Client scopes. 
+
+![ACS Client](images/08_5_acsclientscopes.png)
+
+
+8.6 Check your Identity Provider settings in the Keycloak console and make sure “Sync Mode” is set to “Force” so that any changes in the IDP are reflected in the User’s login. This is important from a compliance standpoint because if any employee quits, they don't get access as the user’s info is updated immediately. 
+
+That’s it. Test by logging into your ACS Console and making sure you can see you are logged in with SSO and have the necessary Role reflected there. 
+
+
+![ACS Client](images/0861.png)
+
+
+
+Go, back to the KeyCloak console and check again for the User menu -> Find the User -> (In this case me atelang) -> Select the User ID -> Goto ‘Role Mappings’ tab -> Look for “Assigned Roles” This should show you the assigned role of “acs_admin” 
+
+Also goto Clients -> “acs” client which we created earlier -> Client Scopes -> Evaluate to see the ID Token information. ID token should show you the claim for groups with role “acs_admin” 
+
+
+![ACS Client](images/0862_token.png)
+
+
+
+
+
+
+
+Last: 
+spoke/managed clusters 
+Spoke/Managed clusters have OAuth servers configured to use OIDC with Issuer url pointing to the Keycloak instance on the Hub cluster
+Role Bindings need to be created to map the groups to cluster roles.  
+
 
 
 ```
@@ -134,7 +277,6 @@ on the spoke setup OAuth and all the necessary secrets and configmaps
 
 
 Special thanks goes to
-
 
 
 
