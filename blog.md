@@ -39,10 +39,19 @@ On the Hub cluster
 
  ![REALM](images/00_rhsoo.png)
 
+In the future we would like to set it up from a location like https://github.com/redhat-cop/gitops-catalog
+The GitOps Catalog includes kustomize bases and overlays for a number of OpenShift operators and applications
+See [here](https://github.com/redhat-cop/gitops-catalog/tree/main/rhsso)
 
-  2. Sign into Keycloak with admin credentials
+
+  Some notes on the Database used with Keycloak.
+
+
+
+  2. Sign into Keycloak-UI with admin credentials.
 
   3. Setup a Realm for ACM under which all the configurations for the fleet of clusters will reside. Typically each realm is for an isolated set of Users, Groups, Clients and IdentityProviders associated with them. 
+
    ![REALM](images/01_acmrealm.png)
 
   4. Configure the Identity Provider in Keycloak. Keycloak will redirect users immediately to `auth.redhat.com` which acts as the Authorization OIDC server.
@@ -51,35 +60,44 @@ On the Hub cluster
 ![IdentityProvider](images/04_openidconnectconfig.png)
 
 
-  5. The Authentication Flow configured is Basic browser based flow with redirect to the configured IDP to authenticate incase cookies are deleted or timeout happened
+  5. The Authentication Flow configured is Basic browser based flow with redirect to the configured IDP to authenticate in case cookies are deleted or a   
+     timeout happened
 
 ![Authentication Flow](images/05_authenticationflow.png)
   
 
-### Configure SSO for ACS 
+### Configure Single-Sign-On(SSO) for RHACS 
+
+Please note that it is also worth to review this excellent blog:
+
+https://cloud.redhat.com/blog/red-hat-advanced-cluster-security-a-guide-to-authentication
 
 
-With RHACS you can have multiple auth providers including OpenShift. You can consume the OpenShift one and use what you already have or use another openid as you like for example you can configure OCP to use keycloak and configure ACS to use OCP oauth.
-In the following we will proceed and use the option to configure ACS to consume Keycloak as auth provider which will get us the same result!
+With RHACS you can have multiple auth providers including OpenShift. You can consume the OpenShift one and use what you already have or use another openid as you like for example you can configure OCP to use keycloak and configure ACS to use OCP Oauth.
+
+In the following we will proceed and use the option to configure RHACS to consume Keycloak as Auth provider which will get us the same result without any modifications on Ouath on the Hub!
 
 
-  6. Clients: Client config is probably the most important aspect of this workflow. There is a client created for each Spoke/Managed cluster and one associated with each Service such as ACS 
+  6. Clients: The client config is probably the most important aspect of the overall workflow. There will be a client created for each Spoke/Managed cluster and one associated with each Service such as ACS 
 
   ![Clients](images/06_clientskeycloak.png)  
 
-Example ACS Client
+Example ACS Client:
 
   ![ACS Client](images/06_acsclient.png) 
 
 Some important settings are as follows:
+
 a: Redirect URL after user successfully logs in with the Authorization server in previous step 
+
 For OpenShift: https://oauth-openshift.apps.cluster-live.aws.ocp.team/oauth2callback/keycloak
 
 For ACS clients there are 2 redirect urls:
+
 https://central-stackrox-central.apps.cluster0.aws.ocp.team/auth/response/oidc
 https://central-stackrox-central.apps.cluster0.aws.ocp.team/sso/providers/oidc/callback
 
-Note: In the ACS Console you will need to add Keycloak as the IDP
+Note: In the ACS Console you will need to add Keycloak as the Identity Provider (IDP)
 
 - Pre-req: ACS Central is installed on the Hub cluster and Admin has link to the console with credentials. 
 - Goto the ACS Console -> Platform Configuration -> Access Control -> Create Auth Provider -> Select OIDC in the drop down
@@ -87,46 +105,42 @@ Note: In the ACS Console you will need to add Keycloak as the IDP
   Once the ACS Client is created in Keycloak you will need to add Client id and client secret in ACS Console. 
 
 
+Let's review some further configuration-steps:
+
  
 ![Access Control](images/06bacs1.png) 
-
 
 ClientID and Secret
 
 ![ACS ClientID-Secret](images/06cclientid-secret.png) 
 
-
-Client scopes  OpenShift client
+Client scopes:  OpenShift client
 
 
 ![Client Scopes OpenShift-Client](images/06_clientscopesopenshiftclient.png)   
  
-
-Client scopes  ACS client
+Client scopes:  ACS client
 
 
 ![Client Scopes ACS-Client](images/06_acsclientscopes.png)
-
 
 
 7: Client Roles and Mappers OCP
 Keycloak gives the option to define Roles that can be applied to users. 
 
 
-Mapping IDP group into ACS role
-            We wanted to map the same group (in our case openshift-pm) coming from RHSSO into 
-
 ![Client ACS](images/07_clientrolesandmappers.png)
 
 These roles can then be synced to Groups on the OpenShift clusters and admin can then create role binding to map the group to roles inside the openshift cluster, in this case cluster admin roles for the group of users above. 
 
 
-
 ![Client ACS](images/07_ocpgroups.png)
 
 8: Mapping IDP group into ACS role
-            We wanted to map the same group (in our case openshift-pm) coming from RHSSO into ACS. 
+
+We wanted to map the same group (in our case openshift-pm) coming from RHSSO into ACS. 
 Prerequisite from ACS: To map IDP groups into ACS groups and roles we need ACS needs ‘groups’ claim in the ID token it receives from Keycloak. 
+
 Goto the Keycloak Instance and follow these Steps:
 
 8.1 Under the acs client you have created in Step 6, Goto Mappers and create a mapper. Make sure to add Token Claim Name as ‘groups’
