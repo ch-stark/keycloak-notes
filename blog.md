@@ -4,53 +4,54 @@ Authors: Anjali Telang and Christian Stark
 
 ## Goal of this blog:
 
-Customers should have a seamless login experience for a user that has OpenShift Platform Plus (OPP) to authenticate to OpenShift and services such as RHACS and RHACM that come along with it. 
-The main motivation for  comes from the actual pain of configuring SSO for a fleet of clusters managed by RCACM. 
+We would like to describe how Customers should have a seamless login experience for a user that has OpenShift Platform Plus (OPP) to authenticate to OpenShift, RedHatAdvancedClusterSecurity RHACS and RedHatAdvancedClusterManagement RHACM that come along with it. 
+
 We would like to demonstrate how to deploy Keycloak and configure it to manage a fleet of clusters and OPP Services such as ACS.
 
 ## Architecture
 
-We have one Hub-Cluster. On this Cluster Keycloak will be setup and also ACS central has been installed. There is another ManagedCluster from there you can
-use SSO using the setup on the Hub.
+We have one OpenShift-Cluster where RHACM and RHACS are installed.. On this Cluster RedHatSSO/Keycloak will be setup. There is another Managed-Cluster from where you can use should able to loging using SSO and using the setup from the Hub.
 
-High level Requirements:
+# High level Requirements:
 
-User should be able to login to the OpenShift console, and to ACM console as well as ACS console with the same identity. 
-
-Federate to external/Enterprise IDPs using Keycloak  
-
-Group information from IDP should be synchronized with the cluster. Keycloak which pulls in group information in the token should be able to apply this across clusters similar to how ldap group sync applies to a single cluster.  
+- User should be able to login to the OpenShift console, and to ACM console as well as ACS console with the same identity. 
+- Federate should happen to external/Enterprise IDPs using Keycloak  
+- Group information from IDP should be synchronized with the cluster. Keycloak which pulls in group information in the token should be able to apply this   - across clusters similar to how ldap group sync applies to a single cluster.  
 
 
 
-## Configure and Install Keycloak operator on the hub cluster (not fips compliant)
+## Configure and Install Keycloak operator on the hub cluster 
 
+Some remarks on keycloak:
 Please note that a new Operator will be rewritten from scratch to provide the best experience for the Quarkus distribution. While the legacy Operator is now deprecated and will reach EOL with Keycloak 20, the new one is already available as a preview, see the installation guide.
 One of the most common concerns around the new Operator is the current lack of the CRDs for managing Keycloak resources, such as realm, users and clients, in a cloud-native way. One of the key aspects of the new Operator will be redesign of managing these Keycloak resources via CRs and git-ops. This new approach will leverage the new storage architecture and future immutability options, making the CRs the declarative single source of truth. In comparison to the legacy Operator, this will bring high robustness, reliability, and predictability to the whole solution.
 
 
+Let's now describe the procedure how to install SSO:
+
+
 Procedure:
 
-Hub cluster
+On the Hub cluster
 
-- 1. Configure and Install Keycloak operator on the hub cluster
+
+  1. Configure and Install Keycloak operator on the hub cluster
 
  ![REALM](images/00_rhsoo.png)
 
 
   2. Sign into Keycloak with admin credentials
 
-  3. Setup Realm for ACM under which all the configurations for the fleet of clusters will reside. Typically each realm is for an isolated set of Users, groups, Clients and IDP associated with them. 
-  Screen
+  3. Setup a Realm for ACM under which all the configurations for the fleet of clusters will reside. Typically each realm is for an isolated set of Users, Groups, Clients and IdentityProviders associated with them. 
+   ![REALM](images/01_acmrealm.png)
 
- ![REALM](images/01_acmrealm.png)
-
-  4. Configure Identity Provider in Keycloak. Keycloak will redirect users immediately to auth.redhat.com which acts as the Authorization OIDC server. 
+  4. Configure the Identity Provider in Keycloak. Keycloak will redirect users immediately to `auth.redhat.com` which acts as the Authorization OIDC server.
+     OIDC stands for "OpenID Connect". It is an authentication protocol which allows to verify user identity when a user is trying to access a protected HTTPs end point. 
 
 ![IdentityProvider](images/04_openidconnectconfig.png)
 
 
-  5. Authentication Flow configured is Basic browser based flow with redirect to the configured IDP to authenticate incase cookies are deleted or timeout happened
+  5. The Authentication Flow configured is Basic browser based flow with redirect to the configured IDP to authenticate incase cookies are deleted or timeout happened
 
 ![Authentication Flow](images/05_authenticationflow.png)
   
@@ -58,11 +59,8 @@ Hub cluster
 ### Configure SSO for ACS 
 
 
-with RHACS you can have multiple auth providers.. including OpenShift
-you can consume the OCP one and use what you already have.. or use another openid as you like
-for example  
-you can configure OCP to use keycloak and configure ACS to use OCP oauth! fine.!!
-another option is to configure ACS to consume keycloak as auth provider, you will get the same result!
+With RHACS you can have multiple auth providers including OpenShift. You can consume the OpenShift one and use what you already have or use another openid as you like for example you can configure OCP to use keycloak and configure ACS to use OCP oauth.
+In the following we will proceed and use the option to configure ACS to consume Keycloak as auth provider which will get us the same result!
 
 
   6. Clients: Client config is probably the most important aspect of this workflow. There is a client created for each Spoke/Managed cluster and one associated with each Service such as ACS 
@@ -76,15 +74,17 @@ Example ACS Client
 Some important settings are as follows:
 a: Redirect URL after user successfully logs in with the Authorization server in previous step 
 For OpenShift: https://oauth-openshift.apps.cluster-live.aws.ocp.team/oauth2callback/keycloak
+
 For ACS clients there are 2 redirect urls:
 https://central-stackrox-central.apps.cluster0.aws.ocp.team/auth/response/oidc
 https://central-stackrox-central.apps.cluster0.aws.ocp.team/sso/providers/oidc/callback
 
 Note: In the ACS Console you will need to add Keycloak as the IDP
 
-Pre-req: ACS Central is installed on the Hub cluster and Admin has link to the console with credentials. 
-Goto the ACS Console -> Platform Configuration -> Access Control -> Create Auth Provider -> Select OIDC in the drop down
-Copy the Callback URLs from this menu and add them to the Keycloak console while Creating the ACS Client. Once the ACS Client is created in Keycloak you will need to add Client id and client secret in ACS Console. 
+- Pre-req: ACS Central is installed on the Hub cluster and Admin has link to the console with credentials. 
+- Goto the ACS Console -> Platform Configuration -> Access Control -> Create Auth Provider -> Select OIDC in the drop down
+- Copy the Callback URLs from this menu and add them to the Keycloak console while Creating the ACS Client. 
+  Once the ACS Client is created in Keycloak you will need to add Client id and client secret in ACS Console. 
 
 
  
