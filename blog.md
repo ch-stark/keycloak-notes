@@ -126,6 +126,7 @@ Client scopes:  ACS client
 
 
 7: Client Roles and Mappers OCP
+
 Keycloak gives the option to define Roles that can be applied to users. 
 
 
@@ -138,7 +139,8 @@ These roles can then be synced to Groups on the OpenShift clusters and admin can
 
 8: Mapping IDP group into ACS role
 
-We wanted to map the same group (in our case openshift-pm) coming from RHSSO into ACS. 
+We wanted to map the same group (in our case openshift-pm) coming from RH-SSO into RHACS. 
+
 Prerequisite from ACS: To map IDP groups into ACS groups and roles we need ACS needs ‘groups’ claim in the ID token it receives from Keycloak. 
 
 Goto the Keycloak Instance and follow these Steps:
@@ -154,11 +156,10 @@ Goto the Keycloak Instance and follow these Steps:
 ![ACS Client](images/08_2roles_acmadmin.png)  
 
 8.3 Now the actual mapper step. Let’s create a mapper in the Keycloak UI under
-     Identity provider -> mappers  and map the roles coming in from IDP to acs_admin
+Identity provider -> mappers  and map the roles coming in from IDP to acs_admin
 
 
 ![ACS Client](images/08_3_mapper.png)
-
 
 
 8.4 Using Client Scopes: This is an important option. We can either add mappers and scopes under individual clients or use this approach which is to create a separate scope that can be applied to multiple clients that want to use the same scope. Here’s how to do it. 
