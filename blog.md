@@ -10,14 +10,13 @@ We would like to demonstrate how to deploy Keycloak and configure it to manage a
 
 ## Architecture
 
-We have one OpenShift-Cluster where RHACM and RHACS are installed.. On this Cluster RedHatSSO/Keycloak will be setup. There is another Managed-Cluster from where you can use should able to loging using SSO and using the setup from the Hub.
+We have one OpenShift-Cluster where RHACM and RHACS are installed. On this Cluster RedHatSSO/Keycloak will be setup. There is another Managed-Cluster from where you can use should able to loging using SSO and using the setup from the Hub.
 
 # High level Requirements:
 
 - User should be able to login to the OpenShift console, and to ACM console as well as ACS console with the same identity. 
 - Federate should happen to external/Enterprise IDPs using Keycloak  
 - Group information from IDP should be synchronized with the cluster. Keycloak which pulls in group information in the token should be able to apply this   - across clusters similar to how ldap group sync applies to a single cluster.  
-
 
 
 ## Configure and Install Keycloak operator on the hub cluster 
@@ -27,8 +26,7 @@ Please note that a new Operator will be rewritten from scratch to provide the be
 One of the most common concerns around the new Operator is the current lack of the CRDs for managing Keycloak resources, such as realm, users and clients, in a cloud-native way. One of the key aspects of the new Operator will be redesign of managing these Keycloak resources via CRs and git-ops. This new approach will leverage the new storage architecture and future immutability options, making the CRs the declarative single source of truth. In comparison to the legacy Operator, this will bring high robustness, reliability, and predictability to the whole solution.
 
 
-Let's now describe the procedure how to install SSO:
-
+## Let's now describe the procedure how to install SSO:
 
 Procedure:
 
@@ -43,9 +41,7 @@ In the future we would like to set it up from a location like https://github.com
 The GitOps Catalog includes kustomize bases and overlays for a number of OpenShift operators and applications
 See [here](https://github.com/redhat-cop/gitops-catalog/tree/main/rhsso)
 
-
   Some notes on the Database used with Keycloak.
-
 
 
   2. Sign into Keycloak-UI with admin credentials.
@@ -60,8 +56,7 @@ See [here](https://github.com/redhat-cop/gitops-catalog/tree/main/rhsso)
 ![IdentityProvider](images/04_openidconnectconfig.png)
 
 
-  5. The Authentication Flow configured is Basic browser based flow with redirect to the configured IDP to authenticate in case cookies are deleted or a   
-     timeout happened
+  5. The Authentication Flow configured is Basic browser based flow with redirect to the configured IDP to authenticate in case cookies are deleted or a timeout happened
 
 ![Authentication Flow](images/05_authenticationflow.png)
   
@@ -72,13 +67,12 @@ Please note that it is also worth to review this excellent blog:
 
 https://cloud.redhat.com/blog/red-hat-advanced-cluster-security-a-guide-to-authentication
 
-
 With RHACS you can have multiple auth providers including OpenShift. You can consume the OpenShift one and use what you already have or use another openid as you like for example you can configure OCP to use keycloak and configure ACS to use OCP Oauth.
 
 In the following we will proceed and use the option to configure RHACS to consume Keycloak as Auth provider which will get us the same result without any modifications on Ouath on the Hub!
 
 
-  6. Clients: The client config is probably the most important aspect of the overall workflow. There will be a client created for each Spoke/Managed cluster and one associated with each Service such as ACS 
+6. Clients: The client config is probably the most important aspect of the overall workflow. There will be a client created for each Spoke/Managed cluster and one associated with each Service such as ACS 
 
   ![Clients](images/06_clientskeycloak.png)  
 
@@ -104,10 +98,8 @@ Note: In the ACS Console you will need to add Keycloak as the Identity Provider 
 - Copy the Callback URLs from this menu and add them to the Keycloak console while Creating the ACS Client. 
   Once the ACS Client is created in Keycloak you will need to add Client id and client secret in ACS Console. 
 
-
 Let's review some further configuration-steps:
 
- 
 ![Access Control](images/06bacs1.png) 
 
 ClientID and Secret
@@ -189,7 +181,6 @@ That’s it. Test by logging into your ACS Console and making sure you can see y
 ![User details](images/0861.png)
 
 
-
 Go, back to the KeyCloak console and check again for the User menu -> Find the User -> (In this case me atelang) -> Select the User ID -> Goto ‘Role Mappings’ tab -> Look for “Assigned Roles” This should show you the assigned role of “acs_admin” 
 
 Also goto Clients -> “acs” client which we created earlier -> Client Scopes -> Evaluate to see the ID Token information. ID token should show you the claim for groups with role “acs_admin” 
@@ -197,19 +188,13 @@ Also goto Clients -> “acs” client which we created earlier -> Client Scopes 
 
 ![Check Token](images/0862_token.png)
 
-
-
-
-
-
-
 Last: 
 spoke/managed clusters 
 Spoke/Managed clusters have OAuth servers configured to use OIDC with Issuer url pointing to the Keycloak instance on the Hub cluster
 Role Bindings need to be created to map the groups to cluster roles.  
 
 
-Helper Commands
+Helper Commands which can be templatized
 
 ```
 # get spoke cluster's redirect url
