@@ -84,12 +84,12 @@ Some important settings are as follows:
 
 a: Redirect URL after user successfully logs in with the Authorization server in previous step 
 
-For OpenShift: https://oauth-openshift.apps.cluster-live.aws.ocp.team/oauth2callback/keycloak
+For OpenShift: https://oauth-openshift.apps.xxx.team/oauth2callback/keycloak
 
 For ACS clients there are 2 redirect urls:
 
-https://central-stackrox-central.apps.cluster0.aws.ocp.team/auth/response/oidc
-https://central-stackrox-central.apps.cluster0.aws.ocp.team/sso/providers/oidc/callback
+https://central-stackrox-central.apps.xxx.team/auth/response/oidc
+https://central-stackrox-central.apps.xxx.team/sso/providers/oidc/callback
 
 Note: In the ACS Console you will need to add Keycloak as the Identity Provider (IDP)
 
