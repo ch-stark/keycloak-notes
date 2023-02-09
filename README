@@ -21,6 +21,8 @@ oc describe oauth cluster
 # create keycloak idp
 oc apply -f ocp-idp.yaml
 
+## pods need to be restarted
+
 # create binding between cluster-admin group and role
 oc apply -f cluster-admin-from-group.yaml
 
