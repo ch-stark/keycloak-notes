@@ -7,8 +7,9 @@
 # get spoke cluster's redirect url
 echo "$(oc get -n openshift-authentication cm v4-0-config-system-metadata -o jsonpath='{.data.oauthMetadata}' | jq -r '.issuer')/oauth2callback/keycloak"
 
-# get route's ca
+# get route's ca from the hub
 oc -n openshift-ingress-operator get secret router-ca -o jsonpath="{ .data.tls\.crt }" | base64 -d -i > ca.crt
+# create on the spoke
 oc -n openshift-config create cm keycloak-ca --from-file=ca.crt
 
 # create client secret
